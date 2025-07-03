@@ -3,6 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { LoginModal } from '@/components/auth/LoginModal';
 import { 
   Search, 
   ShoppingCart, 
@@ -10,20 +13,27 @@ import {
   Phone, 
   MapPin,
   Menu,
-  X
+  X,
+  LogOut,
+  Settings,
+  Package,
+  Heart
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const location = useLocation();
-  const cartItemsCount = 3; // Заглушка для количества товаров в корзине
+  const { user, logout } = useAuth();
+  const { totalItems } = useCart();
 
   const navigation = [
     { name: 'Главная', href: '/' },
@@ -31,10 +41,14 @@ const Header = () => {
     { name: 'Рестораны', href: '/restaurants' },
     { name: 'Акции', href: '/promotions' },
     { name: 'О нас', href: '/about' },
-    { name: 'Контакты', href: '/contacts' },
+    { name: 'Контакты', href: '/contact' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -89,40 +103,86 @@ const Header = () => {
               <Button variant="outline" size="sm" className="relative">
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Корзина</span>
-                {cartItemsCount > 0 && (
+                {totalItems > 0 && (
                   <Badge 
                     variant="destructive" 
                     className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
                   >
-                    {cartItemsCount}
+                    {totalItems}
                   </Badge>
                 )}
               </Button>
             </Link>
 
             {/* Профиль */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <User className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Войти</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link to="/login">Войти</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/register">Регистрация</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">Профиль</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/orders">Мои заказы</Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                    {user.avatar ? (
+                      <img 
+                        src={user.avatar} 
+                        alt={user.name}
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-4 w-4" />
+                    )}
+                    <span className="hidden sm:inline">{user.name}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{user.name}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Профиль
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/orders" className="flex items-center">
+                      <Package className="h-4 w-4 mr-2" />
+                      Мои заказы
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/favorites" className="flex items-center">
+                      <Heart className="h-4 w-4 mr-2" />
+                      Избранное
+                    </Link>
+                  </DropdownMenuItem>
+                  {user.role === 'admin' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="flex items-center">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Админ-панель
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Выйти
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowLogin(true)}
+              >
+                <User className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Войти</span>
+              </Button>
+            )}
 
             {/* Мобильное меню */}
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -180,6 +240,8 @@ const Header = () => {
           ))}
         </nav>
       </div>
+
+      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </header>
   );
 };
